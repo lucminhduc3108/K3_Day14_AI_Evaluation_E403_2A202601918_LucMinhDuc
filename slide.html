@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bài Lab số 14 — AI Evaluation & Benchmarking Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#0f1f2e; font-family:'Be Vietnam Pro',system-ui,sans-serif; }
+  button { font-family:inherit; cursor:pointer; border:none; }
+  button:focus-visible { outline:.4vmin solid #4f9cf9; outline-offset:.4vmin; }
+  code { font-family:'Courier New',monospace; background:rgba(79,156,249,.10); color:#1a6abf; padding:.12em .35em; border-radius:.35em; }
+  .dark code { color:#a9d3ff; background:rgba(79,156,249,.12); }
+
+  #track { display:flex; height:100vh; transition:transform .5s cubic-bezier(.7,0,.2,1); }
+  @media (prefers-reduced-motion:reduce) { #track { transition:none; } }
+
+  .slide { flex:0 0 100vw; height:100vh; display:flex; flex-direction:column; padding:5vmin 6.5vmin; overflow:hidden; }
+  .light { background:#f5f7fa; color:#0f1f2e; }
+  .dark { background:radial-gradient(120% 120% at 50% 0%,#1a3558 0%,#0f1f2e 55%,#08121c 100%); color:#e8f0fb; }
+  .center { align-items:center; justify-content:center; text-align:center; }
+
+  .eyebrow { font-size:2.2vmin; letter-spacing:.42em; text-transform:uppercase; color:#4f9cf9; font-weight:700; }
+  .h1 { font-size:5.3vmin; font-weight:900; line-height:1.04; }
+  .sub { font-size:2.5vmin; font-weight:600; color:#5a6a7a; margin-top:1vmin; line-height:1.4; }
+  .dark .sub { color:#93b8e0; }
+  .head { display:flex; align-items:center; gap:2vmin; flex:0 0 auto; }
+  .badge { font-size:2vmin; font-weight:800; letter-spacing:.18em; background:#4f9cf9; color:#fff; padding:.9vmin 2vmin; border-radius:99px; white-space:nowrap; }
+  .badge.orange { background:#e07c3a; }
+  .badge.green { background:#2c9b68; }
+  .badge.grey { background:#5a6a7a; }
+  .clock { margin-left:auto; font-size:2.2vmin; font-weight:800; color:#7a8a9a; white-space:nowrap; }
+  .who { font-size:2vmin; font-weight:800; letter-spacing:.14em; text-transform:uppercase; padding:.8vmin 1.8vmin; border-radius:99px; white-space:nowrap; }
+  .who.individual { background:#e8f0fb; color:#1a6abf; border:.3vmin solid #93b8e0; }
+
+  .body { flex:1; min-height:0; display:flex; gap:4vmin; margin-top:2.5vmin; }
+  .main { flex:1.45; min-width:0; display:flex; flex-direction:column; gap:1.6vmin; }
+  .side { flex:0 0 31vw; display:flex; flex-direction:column; gap:1.6vmin; }
+
+  .card { background:#fff; border:.35vmin solid #d5dde8; border-radius:2.2vmin; padding:2.1vmin 2.5vmin; }
+  .card h3,.card h4 { margin:0; font-weight:800; color:#0f1f2e; }
+  .card h3 { font-size:2.9vmin; }
+  .card h4 { font-size:2.4vmin; }
+  .card p { margin:.55vmin 0 0; font-size:1.9vmin; font-weight:500; color:#5a6a7a; line-height:1.42; }
+  .card.blue { background:#e8f4ff; border-color:#93b8e0; }
+  .card.amber { background:#fdf3e0; border-color:#e8b84c; }
+  .card.red { background:#fdeaea; border-color:#e07070; }
+  .card.green { background:#e8f6ee; border-color:#6abf8a; }
+  .dark .card { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.18); }
+  .dark .card h3,.dark .card h4 { color:#e8f0fb; }
+  .dark .card p { color:#93b8e0; }
+
+  .li { display:flex; align-items:flex-start; gap:1.5vmin; font-size:2.45vmin; font-weight:600; line-height:1.4; }
+  .li b { color:#1a6abf; }
+  .dark .li b { color:#4f9cf9; }
+  .dot { color:#4f9cf9; font-weight:900; flex:0 0 auto; }
+  .pill { display:inline-flex; align-self:flex-start; align-items:center; gap:1.2vmin; background:#fbeee4; border:.35vmin solid #e07c3a; color:#a8531f; font-size:2.05vmin; font-weight:700; padding:1.05vmin 2.1vmin; border-radius:99px; }
+  .pill.blue { background:#e8f0fb; border-color:#4f9cf9; color:#1a6abf; }
+  .pill.green { background:#e8f6ee; border-color:#55a979; color:#26724f; }
+  .dark .pill { background:rgba(79,156,249,.13); border-color:#4f9cf9; color:#bcd8fa; }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5vmin; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5vmin; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:1.3vmin; }
+
+  .metric { display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:12vmin; text-align:center; background:#fff; border:.35vmin solid #d5dde8; border-radius:2vmin; padding:1.5vmin; }
+  .metric strong { color:#1a6abf; font-size:2.7vmin; }
+  .metric span { margin-top:.55vmin; color:#5a6a7a; font-size:1.7vmin; font-weight:700; line-height:1.35; }
+
+  .timer { display:flex; flex-direction:column; align-items:center; background:#fff; border:.45vmin solid #d5dde8; border-radius:3vmin; padding:2.4vmin 2vmin; box-shadow:0 3vmin 6vmin rgba(10,20,40,.1); }
+  .dark .timer { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.18); box-shadow:none; }
+  .t-label { font-size:1.8vmin; letter-spacing:.3em; text-transform:uppercase; color:#7a8a9a; font-weight:700; }
+  .t-num { font-size:15vmin; font-weight:900; line-height:.92; font-variant-numeric:tabular-nums; color:#0f1f2e; margin:1.1vmin 0; }
+  .dark .t-num { color:#e8f0fb; }
+  .t-num.warn { color:#c62f2f; }
+  .t-btns { display:flex; gap:1.4vmin; margin-top:1.4vmin; }
+  .t-btns button { font-size:2vmin; font-weight:800; padding:1.15vmin 2.4vmin; border-radius:99px; }
+  .t-start { background:#1a6abf; color:#fff; }
+  .t-reset { background:#e9ebe6; color:#5a6a7a; }
+
+  .phase-box { border-radius:1.8vmin; padding:1.65vmin 1.25vmin; text-align:center; }
+  .phase-lbl { font-size:1.65vmin; font-weight:800; letter-spacing:.15em; }
+  .phase-name { font-size:2.15vmin; font-weight:800; margin-top:.45vmin; }
+  .phase-time { font-size:1.7vmin; font-weight:700; color:#7a8a9a; margin-top:.35vmin; }
+  .phase-blue { background:#e8f0fb; border:.35vmin solid #93b8e0; }
+  .phase-blue .phase-lbl { color:#1a6abf; }
+  .phase-orange { background:#fbeee4; border:.35vmin solid #e5b691; }
+  .phase-orange .phase-lbl { color:#a8531f; }
+  .phase-green { background:#e8f6ee; border:.35vmin solid #8bc6a3; }
+  .phase-green .phase-lbl { color:#26724f; }
+  .phase-break { background:#f2f3f0; border:.35vmin dashed #b9c0b6; }
+  .phase-break .phase-lbl { color:#7a8a9a; }
+
+  .num-accent { font-size:4vmin; font-weight:900; color:#4f9cf9; min-width:7vmin; }
+  .step-row { display:flex; align-items:center; gap:2.6vmin; border-top:.28vmin solid #d5dde8; padding:1.8vmin .4vmin; }
+  .step-row:last-child { border-bottom:.28vmin solid #d5dde8; }
+  .dark .step-row { border-color:rgba(255,255,255,.18); }
+  .question { font-size:2.75vmin; font-weight:600; line-height:1.35; }
+  .question b { color:#1a6abf; }
+  .dark .question b { color:#4f9cf9; }
+
+  .trace { background:#0a1828; border:.35vmin solid #1e3a5a; border-radius:2vmin; padding:1.8vmin 2.2vmin; }
+  .trace-label { margin-bottom:1vmin; color:#5a8abf; font-size:1.7vmin; font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
+  .trace pre { margin:0; font-size:1.7vmin; line-height:1.55; color:#93d4ff; font-weight:600; white-space:pre-wrap; font-family:'Courier New',monospace; }
+
+  .formula { background:#0f1f2e; color:#e8f0fb; border-radius:1.6vmin; padding:1.2vmin 1.4vmin; font-size:1.65vmin; line-height:1.45; font-family:'Courier New',monospace; }
+  .formula b { color:#93d4ff; }
+  .mini-table { width:100%; border-collapse:collapse; font-size:1.68vmin; font-weight:600; background:#fff; border-radius:1.8vmin; overflow:hidden; }
+  .mini-table th,.mini-table td { border:.22vmin solid #d5dde8; padding:.78vmin 1vmin; text-align:left; vertical-align:top; }
+  .mini-table th { background:#e8f0fb; color:#1a6abf; font-weight:800; }
+  .mini-table td { color:#4d5d6d; line-height:1.35; }
+  .score { font-size:7.2vmin; font-weight:900; color:#1a6abf; line-height:1; }
+  .finish-title { font-size:8.2vmin; font-weight:900; line-height:1.02; }
+
+  .nav { position:fixed; top:50%; transform:translateY(-50%); width:6vmin; height:9vmin; border-radius:1.5vmin; background:transparent; color:#1a6abf; font-size:4vmin; font-weight:800; display:flex; align-items:center; justify-content:center; opacity:.08; z-index:20; transition:opacity .2s,background .2s,color .2s; }
+  .nav:hover,.nav:focus-visible { opacity:1; background:rgba(10,20,40,.88); color:#fff; }
+  .nav.p { left:.4vmin; } .nav.n { right:.4vmin; }
+  #dots { position:fixed; bottom:2vmin; left:50%; transform:translateX(-50%); display:flex; gap:.9vmin; align-items:center; z-index:20; }
+  #dots button { height:1.1vmin; width:1.1vmin; border-radius:99px; background:rgba(255,255,255,.4); transition:all .3s; padding:0; }
+  #dots button.on { width:4vmin; background:#4f9cf9; }
+
+  @media (max-width:900px) {
+    body { overflow:auto; }
+    #track { display:block; height:auto; transform:none !important; }
+    .slide { min-height:100svh; height:auto; overflow:visible; padding:6vmin 6vmin 14vmin; }
+    .body { display:block; height:auto; }
+    .main,.side { margin-bottom:3vmin; }
+    .grid3,.grid4 { grid-template-columns:1fr 1fr; }
+    .nav { opacity:.35; }
+  }
+  @media (max-width:560px) {
+    .head { align-items:flex-start; flex-wrap:wrap; }
+    .head .clock { margin-left:0; width:100%; }
+    .grid2,.grid3,.grid4 { grid-template-columns:1fr; }
+    .question { font-size:4.2vmin; }
+    .finish-title { font-size:12vmin; }
+  }
+</style>
+</head>
+<body>
+<div id="track">
+
+  <!-- 1 -->
+  <section class="slide dark center">
+    <div class="eyebrow" style="margin-bottom:3vmin;">Khởi động buổi học</div>
+    <div style="font-size:13.5vmin;font-weight:900;line-height:.98;">BÀI LAB SỐ 14</div>
+    <div style="width:16vmin;height:.7vmin;background:#4f9cf9;border-radius:99px;margin:4vmin 0;"></div>
+    <div style="font-size:4.2vmin;font-weight:500;color:#93b8e0;">Chủ đề: <b style="color:#fff;font-weight:800;">AI Evaluation &amp; Benchmarking</b></div>
+    <div style="font-size:2.7vmin;font-weight:600;color:#5a8abf;margin-top:3vmin;letter-spacing:.04em;">Từ evaluation core → Golden Dataset → Benchmark → Failure Analysis</div>
+    <div style="margin-top:3vmin;"><span class="who individual">Hình thức làm: Cá nhân</span></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide light">
+    <div class="head"><div><div class="h1">MỤC TIÊU CUỐI BUỔI</div><div class="sub">Không chỉ “chấm điểm AI” — phải đo được, giải thích được và phát hiện regression được.</div></div></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:.8vmin;margin-top:1vmin;">
+      <div class="step-row"><span class="num-accent">01</span><span class="question">Hoàn thiện <b>evaluation core</b>: Data Models, RAGAS-style metrics, LLM-as-a-Judge, BenchmarkRunner, FailureAnalyzer.</span></div>
+      <div class="step-row"><span class="num-accent">02</span><span class="question">Xây <b>Golden Dataset 20 câu</b> có stratification và evidence provenance.</span></div>
+      <div class="step-row"><span class="num-accent">03</span><span class="question">Đánh giá một <b>RAG thật</b> bằng 5 metrics và phân biệt lỗi retrieval với generation.</span></div>
+      <div class="step-row"><span class="num-accent">04</span><span class="question">Dùng <b>5 Whys + failure clustering</b> để tìm root cause và đề xuất fix có thể kiểm chứng.</span></div>
+    </div>
+    <div class="pill">API key chỉ cần ở Part 3 khi chạy domain_assistant.py — phần core coding không cần API.</div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide light">
+    <div class="head"><div><div class="h1">LUỒNG BUỔI LAB</div><div class="sub">T+0 – T+3h45p · Deadline nộp bài <b style="color:#1a6abf;">T+2h45p</b> · Sau đó Demo &amp; Q&amp;A</div></div></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:1.4vmin;">
+      <div class="grid4">
+        <div class="phase-box phase-blue"><div class="phase-lbl">CP0</div><div class="phase-name">Setup &amp; Baseline</div><div class="phase-time">T+0p–T+15p · 15'</div></div>
+        <div class="phase-box phase-blue"><div class="phase-lbl">CP1</div><div class="phase-name">Warm-up</div><div class="phase-time">T+15p–T+30p · 15'</div></div>
+        <div class="phase-box phase-orange"><div class="phase-lbl">CP2</div><div class="phase-name">Core Coding</div><div class="phase-time">T+30p–T+1h25p · 55'</div></div>
+        <div class="phase-box phase-orange"><div class="phase-lbl">CP3</div><div class="phase-name">Golden Dataset + Benchmark</div><div class="phase-time">T+1h25p–T+2h20p · 55'</div></div>
+      </div>
+      <div class="grid4">
+        <div class="phase-box phase-green"><div class="phase-lbl">CP4</div><div class="phase-name">Failure Analysis</div><div class="phase-time">T+2h20p–T+2h35p · 15'</div></div>
+        <div class="phase-box phase-blue"><div class="phase-lbl">FINAL</div><div class="phase-name">Kiểm tra &amp; Nộp</div><div class="phase-time">T+2h35p–T+2h45p · 10'</div></div>
+        <div class="phase-box phase-break" style="grid-column:span 2;"><div class="phase-lbl">DEMO &amp; Q&amp;A</div><div class="phase-name">Trình bày pipeline + benchmark + root cause</div><div class="phase-time">T+2h45p–T+3h45p · 60'</div></div>
+      </div>
+    </div>
+    <div class="pill blue">Tổng thời lượng: 225 phút · Phần làm bài: 165 phút · Demo/Q&amp;A: 60 phút</div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide dark">
+    <div class="head"><span class="badge">BỨC TRANH LỚN</span><span class="h1">AI EVALUATION PIPELINE</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="trace">
+          <div class="trace-label">Concept Flow</div>
+          <pre>template.py còn TODO
+      ↓
+Data Models & Scoring
+      ↓
+RAGAS-style Metrics
+      ↓
+LLM-as-a-Judge
+      ↓
+Golden Dataset 20 QA
+      ↓
+Benchmark & Regression
+      ↓
+Failure Analysis + 5 Whys</pre>
+        </div>
+        <div class="pill blue">Evaluation = Hypothesis → Experiment → Measure → Conclude → Iterate</div>
+      </div>
+      <div class="side">
+        <div class="card"><h4>System under evaluation</h4><p><code>domain_assistant.py</code><br>RAG assistant thật — sinh actual answer.</p></div>
+        <div class="card"><h4>Evaluation engine</h4><p><code>template.py</code><br>Bộ máy chấm điểm — đây là phần bạn phải code.</p></div>
+        <div class="card"><h4>Adapter</h4><p><code>evaluate_answers.py</code><br>Nối artifacts từ RAG vào evaluation core.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide light">
+    <div class="head"><span class="badge">CP0</span><span class="h1">SETUP &amp; BASELINE TESTS</span><span class="clock">15 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="li"><span class="dot">•</span><span>Tạo/fork repo cá nhân theo chuẩn <code>K3_Day14_AI_Evaluation_&lt;Phòng&gt;_&lt;MSSV&gt;_&lt;HọTên&gt;</code>.</span></div>
+        <div class="li"><span class="dot">•</span><span>Dùng <b>Python 3.11+</b>, tạo <code>.venv</code>, cài <code>requirements.txt</code>.</span></div>
+        <div class="li"><span class="dot">•</span><span>Chạy <code>pytest tests/ -v</code> để lấy baseline.</span></div>
+        <div class="li"><span class="dot">•</span><span>Kết quả starter dự kiến: <b>42 tests collected, 42 failed</b> — đây là trạng thái bình thường trước khi code.</span></div>
+        <div class="card amber"><h4>Điều quan trọng</h4><p>Baseline hợp lệ khi tests chạy được và không có lỗi collection/import/dependency trước khi bắt đầu test.</p></div>
+      </div>
+      <div class="side">
+        <div class="timer" data-secs="900"><div class="t-label">Thời gian CP0</div><div class="t-num">15:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card blue"><h4>Checkpoint</h4><p><code>python --version</code> → 3.11+<br><code>pytest tests/ -v</code> → 42 collected / 42 failed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide light">
+    <div class="head"><span class="badge">CP1</span><span class="h1">WARM-UP: HIỂU EVALUATION TRƯỚC KHI CODE</span><span class="clock">15 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="grid2">
+          <div class="card blue"><h4>Offline Evaluation</h4><p>Chạy khi release / prompt change. Phù hợp benchmark có thể lặp lại.</p></div>
+          <div class="card green"><h4>Online Evaluation</h4><p>Chạy liên tục trên traffic thật để phát hiện thay đổi chất lượng.</p></div>
+          <div class="card amber"><h4>Human Evaluation</h4><p>Dùng khi high-stakes hoặc cần calibration với con người.</p></div>
+          <div class="card"><h4>CI/CD Quality Gate</h4><p>Evaluation phải có threshold/regression rule để chặn chất lượng tụt.</p></div>
+        </div>
+        <div class="li"><span class="dot">•</span><span>Hoàn thành <b>Exercises 1.1–1.3</b> trong <code>exercises.md</code>.</span></div>
+        <div class="li"><span class="dot">•</span><span>Nắm ba bias của LLM-as-a-Judge: <b>position bias, verbosity bias, self-preference bias</b>.</span></div>
+      </div>
+      <div class="side">
+        <div class="timer" data-secs="900"><div class="t-label">Thời gian CP1</div><div class="t-num">15:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card red"><h4>Không được nhầm</h4><p>Phần Warm-up chỉ phân tích lý thuyết và điền worksheet — chưa sửa <code>template.py</code>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide dark">
+    <div class="head"><span class="badge orange">CP2</span><span class="h1">CORE CODING — 5 TASK BẮT BUỘC</span><span class="clock">55 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="step-row"><span class="num-accent">01</span><span class="question"><b>Data Models</b> — QAPair, EvalResult, overall_score().</span></div>
+        <div class="step-row"><span class="num-accent">02</span><span class="question"><b>RAGASEvaluator</b> — 3 answer metrics + 2 retrieval metrics.</span></div>
+        <div class="step-row"><span class="num-accent">03</span><span class="question"><b>LLMJudge</b> — prompt, parse scores, detect bias.</span></div>
+        <div class="step-row"><span class="num-accent">04</span><span class="question"><b>BenchmarkRunner</b> — run, report, regression, identify failures.</span></div>
+        <div class="step-row"><span class="num-accent">05</span><span class="question"><b>FailureAnalyzer</b> — categorize, root cause, suggestion, improvement log.</span></div>
+      </div>
+      <div class="side">
+        <div class="timer dark" data-secs="3300"><div class="t-label">Thời gian CP2</div><div class="t-num">55:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card"><h4>Mục tiêu test</h4><p><span class="score">41/42</span><br>Tối thiểu 41 passed, 1 skipped cho phần bắt buộc. 42/42 nếu làm bonus reranking.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide light">
+    <div class="head"><span class="badge">METRICS</span><span class="h1">5 METRICS CẦN HIỂU VÀ DIỄN GIẢI</span></div>
+    <div class="body">
+      <div class="main">
+        <table class="mini-table">
+          <thead><tr><th>Metric</th><th>Đo điều gì?</th><th>Heuristic trong lab</th></tr></thead>
+          <tbody>
+            <tr><td><b>Faithfulness</b></td><td>Answer có grounded trong context?</td><td><code>|answer ∩ context| / |answer|</code></td></tr>
+            <tr><td><b>Relevance</b></td><td>Answer có trả lời đúng question?</td><td><code>|answer ∩ question| / |question|</code></td></tr>
+            <tr><td><b>Completeness</b></td><td>Answer có đủ nội dung expected?</td><td><code>|answer ∩ expected| / |expected|</code></td></tr>
+            <tr><td><b>Context Recall</b></td><td>Retriever có lấy đủ evidence?</td><td><code>|expected ∩ union(chunks)| / |expected|</code></td></tr>
+            <tr><td><b>Context Precision</b></td><td>Relevant chunk có đứng sớm?</td><td>Average Precision@K</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="side">
+        <div class="card blue"><h4>Chẩn đoán retrieval</h4><p><b>Recall thấp + Completeness thấp</b> → có thể retriever bỏ sót evidence.</p></div>
+        <div class="card amber"><h4>Chẩn đoán ranking</h4><p><b>Recall cao + Precision thấp</b> → lấy đủ evidence nhưng ranking/noise kém.</p></div>
+        <div class="card red"><h4>Chẩn đoán generation</h4><p><b>Retrieval tốt + Faithfulness thấp</b> → model có thể bịa/thêm claim ngoài context.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide light">
+    <div class="head"><span class="badge orange">CP3</span><span class="h1">GOLDEN DATASET → RAG → BENCHMARK</span><span class="clock">55 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="grid2">
+          <div class="metric"><strong>20 QA</strong><span>Golden Dataset tổng</span></div>
+          <div class="metric"><strong>10 docs</strong><span>Corpus phải được phủ đủ</span></div>
+          <div class="metric"><strong>5 / 7 / 5 / 3</strong><span>Easy / Medium / Hard / Adversarial</span></div>
+          <div class="metric"><strong>Verbatim</strong><span>Evidence phải là substring nguyên văn từ corpus</span></div>
+        </div>
+        <div class="li"><span class="dot">1</span><span>Đọc <code>manifest.json</code> và 10 tài liệu trong <code>data/student_services/</code>.</span></div>
+        <div class="li"><span class="dot">2</span><span>Điền <code>golden_dataset.json</code> và chạy <code>python validate_golden_dataset.py</code>.</span></div>
+        <div class="li"><span class="dot">3</span><span>Chạy <code>domain_assistant.py</code> để sinh 20 actual answers + retrieved contexts.</span></div>
+        <div class="li"><span class="dot">4</span><span>Chạy <code>evaluate_answers.py</code>, điền Exercise 3.2 và chọn <b>3 case Overall thấp nhất</b>.</span></div>
+      </div>
+      <div class="side">
+        <div class="timer" data-secs="3300"><div class="t-label">Thời gian CP3</div><div class="t-num">55:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card green"><h4>Validator phải báo</h4><p><code>PASS: dataset structure and evidence provenance are valid.</code></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide dark">
+    <div class="head"><span class="badge orange">LLM JUDGE</span><span class="h1">RUBRIC 1–5 KHÔNG ĐƯỢC MƠ HỒ</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="trace"><div class="trace-label">Rubric cần mô tả rõ</div><pre>5 — Đúng, đầy đủ, grounded, không thiếu điều kiện/ngoại lệ quan trọng
+4 — Hầu hết đúng, thiếu chi tiết nhỏ nhưng không làm sai quyết định
+3 — Đúng một phần, thiếu điều kiện đáng kể hoặc có claim chưa đủ evidence
+2 — Nhiều lỗi, bỏ sót thông tin trọng yếu hoặc suy diễn ngoài corpus
+1 — Sai nghiêm trọng / không trả lời / vi phạm safety hoặc privacy</pre></div>
+        <div class="pill blue">Không thưởng answer chỉ vì dài. Không phạt answer ngắn nếu đủ evidence và đúng intent.</div>
+      </div>
+      <div class="side">
+        <div class="card"><h4>Bias 1</h4><p><b>Position bias</b> — thiên vị answer xuất hiện trước.</p></div>
+        <div class="card"><h4>Bias 2</h4><p><b>Verbosity bias</b> — thiên vị answer dài hơn.</p></div>
+        <div class="card"><h4>Bias 3</h4><p><b>Self-preference bias</b> — thiên vị output giống model judge.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide light">
+    <div class="head"><span class="badge green">CP4</span><span class="h1">FAILURE ANALYSIS BẰNG 5 WHYS</span><span class="clock">15 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="trace" style="background:#0f1f2e;"><div class="trace-label">Luồng phân tích một failure</div><pre>Case có Overall Score thấp
+        ↓
+So sánh Expected ↔ Actual ↔ Retrieved Contexts
+        ↓
+Xác định Symptom
+        ↓
+WHY? → WHY? → WHY? → WHY? → WHY?
+        ↓
+Root Cause có thể hành động
+        ↓
+Fix cụ thể + Metric để verify
+        ↓
+Cluster failures → ưu tiên fix có tác động rộng</pre></div>
+        <div class="li"><span class="dot">•</span><span>Phân tích <b>3 case tệ nhất</b> trong <code>reflection.md</code>.</span></div>
+        <div class="li"><span class="dot">•</span><span>So sánh nhận định của bạn với <code>find_root_cause()</code>.</span></div>
+      </div>
+      <div class="side">
+        <div class="timer" data-secs="900"><div class="t-label">Thời gian CP4</div><div class="t-num">15:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card amber"><h4>Không dừng ở</h4><p>“AI trả lời sai”. Root cause phải đủ cụ thể để có thể sửa và đo lại bằng benchmark.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide light">
+    <div class="head"><span class="badge orange">FINAL</span><span class="h1">KIỂM TRA CUỐI &amp; NỘP BÀI</span><span class="clock">10 phút</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="li"><span class="dot">✔</span><span>Copy <code>template.py</code> → <code>solution/solution.py</code>.</span></div>
+        <div class="li"><span class="dot">✔</span><span><code>pytest tests/ -v</code> đạt tối thiểu <b>41 passed, 1 skipped</b>.</span></div>
+        <div class="li"><span class="dot">✔</span><span><code>python validate_golden_dataset.py</code> báo <b>PASS</b>.</span></div>
+        <div class="li"><span class="dot">✔</span><span>Đủ 4 deliverables: <code>solution/solution.py</code>, <code>golden_dataset.json</code>, <code>exercises.md</code>, <code>reflection.md</code>.</span></div>
+        <div class="li"><span class="dot">!</span><span><b>Không commit</b> <code>.env</code>, API key hoặc dữ liệu ngoài repo.</span></div>
+      </div>
+      <div class="side">
+        <div class="timer" data-secs="600"><div class="t-label">Thời gian Final</div><div class="t-num">10:00</div><div class="t-btns"><button class="t-start" type="button">START</button><button class="t-reset" type="button">RESET</button></div></div>
+        <div class="card red"><h4>Lưu ý quan trọng</h4><p>Tests ưu tiên load <code>solution/solution.py</code>. Nếu sửa <code>template.py</code> sau khi copy, phải copy lại trước lần test cuối.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide dark">
+    <div class="head"><span class="badge">DEMO</span><span class="h1">T+2h45p–T+3h45p · DEMO &amp; Q&amp;A</span></div>
+    <div class="body">
+      <div class="main">
+        <div class="step-row"><span class="num-accent">01</span><span class="question">Giải thích <b>pipeline evaluation</b>: system under evaluation ↔ evaluation engine.</span></div>
+        <div class="step-row"><span class="num-accent">02</span><span class="question">Show <b>benchmark results</b> và giải thích ít nhất 2–3 metrics, không chỉ đọc pass rate.</span></div>
+        <div class="step-row"><span class="num-accent">03</span><span class="question">Mở một <b>failure case</b>: Expected ↔ Actual ↔ Retrieved Contexts.</span></div>
+        <div class="step-row"><span class="num-accent">04</span><span class="question">Trình bày <b>5 Whys → Root Cause → Fix → Metric verify</b>.</span></div>
+      </div>
+      <div class="side">
+        <div class="card"><h4>Giảng viên có thể hỏi</h4><p>Vì sao Context Recall cao nhưng Context Precision thấp? Khi nào lỗi là retrieval, khi nào là generation? Vì sao benchmark score không phải là điểm lab?</p></div>
+        <div class="card"><h4>Điểm cần nhấn mạnh</h4><p>Điểm lab dựa trên pipeline đúng, dataset có chất lượng, evidence hợp lệ và phân tích có căn cứ — không phụ thuộc pass rate phải đạt một con số cố định.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide dark center">
+    <div class="eyebrow" style="margin-bottom:3vmin;">Kết thúc giới thiệu Lab 14</div>
+    <div class="finish-title">ĐỪNG “CẢM NHẬN” AI TỐT HAY XẤU.<br><span style="color:#4f9cf9;">HÃY ĐO — SO SÁNH — GIẢI THÍCH.</span></div>
+    <div style="width:16vmin;height:.7vmin;background:#4f9cf9;border-radius:99px;margin:4vmin 0;"></div>
+    <div class="sub" style="color:#93b8e0;max-width:78vmin;">Một evaluation tốt phải lặp lại được, so sánh được, chạy tự động được và giúp chỉ ra nguyên nhân để cải thiện hệ thống.</div>
+  </section>
+
+</div>
+<button class="nav p" id="prev" type="button" aria-label="Slide trước">‹</button>
+<button class="nav n" id="next" type="button" aria-label="Slide sau">›</button>
+<div id="dots" aria-label="Chọn slide"></div>
+<script>
+(function(){
+  var track=document.getElementById('track');
+  var slides=Array.prototype.slice.call(track.children);
+  var total=slides.length,current=0;
+  var dotsWrap=document.getElementById('dots');
+  for(var i=0;i<total;i++){
+    (function(index){
+      var dot=document.createElement('button');
+      dot.type='button'; dot.setAttribute('aria-label','Slide '+(index+1));
+      dot.addEventListener('click',function(){go(index);});
+      dotsWrap.appendChild(dot);
+    })(i);
+  }
+  function go(index){
+    current=Math.max(0,Math.min(total-1,index));
+    track.style.transform='translateX(-'+(current*100)+'vw)';
+    Array.prototype.forEach.call(dotsWrap.children,function(dot,i){dot.className=i===current?'on':'';});
+    window.location.hash='slide='+current;
+  }
+  document.getElementById('prev').onclick=function(){go(current-1);};
+  document.getElementById('next').onclick=function(){go(current+1);};
+  window.addEventListener('keydown',function(event){
+    if(event.key==='ArrowRight'||event.key==='PageDown'||event.key===' '){event.preventDefault();go(current+1);}
+    else if(event.key==='ArrowLeft'||event.key==='PageUp'){event.preventDefault();go(current-1);}
+    else if(event.key==='Home'){event.preventDefault();go(0);}
+    else if(event.key==='End'){event.preventDefault();go(total-1);}
+  });
+  function format(seconds){var minutes=Math.floor(seconds/60),secs=seconds%60;return [minutes,secs].map(function(value){return String(value).padStart(2,'0');}).join(':');}
+  Array.prototype.forEach.call(document.querySelectorAll('.timer'),function(box){
+    var totalSeconds=parseInt(box.getAttribute('data-secs'),10),left=totalSeconds,running=false;
+    var display=box.querySelector('.t-num'),start=box.querySelector('.t-start'),reset=box.querySelector('.t-reset');
+    function paint(){display.textContent=format(left);display.className='t-num'+(left<=300?' warn':'');start.textContent=running?'PAUSE':'START';}
+    start.onclick=function(){running=!running;paint();};
+    reset.onclick=function(){running=false;left=totalSeconds;paint();};
+    setInterval(function(){if(running&&left>0){left--;if(!left)running=false;paint();}},1000);
+    paint();
+  });
+  var requestedSlide=parseInt((window.location.hash.match(/slide=(\d+)/)||[])[1],10);
+  go(Number.isFinite(requestedSlide)?requestedSlide:0);
+})();
+</script>
+</body>
+</html>
