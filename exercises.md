@@ -297,20 +297,20 @@ thay đổi Context Recall hay không.
 
 | ID | Recall before | Recall after | Precision before | Precision after | Delta Precision |
 |---|---:|---:|---:|---:|---:|
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| | | | | | |
-| **Avg** | | | | | |
+| E02 | 1.000 | 1.000 | 0.806 | 1.000 | +0.194 |
+| M05 | 0.972 | 0.972 | 0.887 | 0.950 | +0.062 |
+| A02 | 0.650 | 0.650 | 0.950 | 0.887 | -0.062 |
+| A03 | 0.500 | 0.500 | 0.887 | 0.804 | -0.083 |
+| H02 | 0.864 | 0.864 | 1.000 | 1.000 | +0.000 |
+| **Avg** | **0.797** | **0.797** | **0.906** | **0.928** | **+0.022** |
 
 **Tại sao Recall dự kiến không đổi?**
 
-> *Câu trả lời:*
+> Context Recall đo **union** của toàn bộ chunks so với expected answer. Reranking chỉ thay đổi thứ tự trong danh sách — tập chunks hoàn toàn giữ nguyên, nên union không thay đổi và Recall cũng không đổi. Kết quả thực tế xác nhận: cả 5 cases đều có Recall before = Recall after.
 
 **Khi nào reranking không đủ và cần sửa retriever/query/chunking?**
 
-> *Câu trả lời:*
+> Reranking thất bại khi chunk liên quan chưa từng được retrieve ngay từ đầu — đây là vấn đề Recall thấp, không phải vấn đề thứ tự. Ví dụ: A03 có Recall chỉ 0.500, nghĩa là một nửa evidence không có trong retrieved set; reranker không thể đưa lên những gì không có. Ngoài ra, reranker lexical dùng word overlap với query có thể phản tác dụng với adversarial queries (A02, A03 bị -0.062 và -0.083): câu hỏi chứa từ "GPA", "student record" match với noise chunks hơn là safety/scope chunks có từ vựng đặc thù ("override", "cannot"). Những trường hợp này cần sửa retriever (tăng top-k, thêm NU-00 cố định), cải thiện chunking (tách scope rules thành chunks nhỏ hơn với từ khóa rõ hơn), hoặc dùng cross-encoder reranker thay vì lexical overlap.
 
 ---
 
@@ -331,4 +331,4 @@ Hoàn thành kiểm tra cuối trong khoảng 11:50–12:00.
 - [x] Exercise 3.3 có rubric 1–5 và bias controls.
 - [x] `reflection.md` có ba failure analyses và regression strategy.
 - [x] Đã copy `template.py` thành `solution/solution.py`.
-- [ ] Exercise 3.4 và 3.5 chỉ làm nếu chọn bonus.
+- [x] Exercise 3.5 (Bonus +5): `rerank_by_overlap()` đã implement và bảng before/after đã điền.
